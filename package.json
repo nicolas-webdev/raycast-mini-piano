@@ -54,20 +54,24 @@
       ]
     },
     {
-      "name": "tileStyle",
+      "name": "noteLength",
       "type": "dropdown",
-      "title": "Key Tiles",
-      "description": "Drawn tiles show the note name and key hint on the key itself. Plain tiles use flat colors with labels underneath.",
+      "title": "Note Length",
+      "description": "How long each note rings. Short keeps fast runs clean.",
       "required": false,
-      "default": "drawn",
+      "default": "short",
       "data": [
         {
-          "title": "Drawn keys",
-          "value": "drawn"
+          "title": "Short",
+          "value": "short"
         },
         {
-          "title": "Plain colors",
-          "value": "plain"
+          "title": "Medium",
+          "value": "medium"
+        },
+        {
+          "title": "Long",
+          "value": "long"
         }
       ]
     }

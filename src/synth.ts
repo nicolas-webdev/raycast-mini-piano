@@ -5,10 +5,18 @@ import { join } from "path";
 import { environment } from "@raycast/api";
 
 export type Tone = "piano" | "sine" | "organ";
+export type NoteLength = "short" | "medium" | "long";
+
+export interface Sound {
+  tone: Tone;
+  length: NoteLength;
+}
 
 const SAMPLE_RATE = 44100;
 // Bump when the synthesis changes so stale cached WAVs are regenerated.
-const SYNTH_VERSION = 1;
+const SYNTH_VERSION = 2;
+
+const LENGTH_FACTOR: Record<NoteLength, number> = { short: 0.5, medium: 0.85, long: 1.4 };
 
 const NOTES_DIR = join(environment.supportPath, "notes");
 
@@ -34,16 +42,17 @@ interface Voice {
   detuneCents: number;
 }
 
-function voiceFor(tone: Tone, frequency: number): Voice {
+function voiceFor({ tone, length }: Sound, frequency: number): Voice {
+  const factor = LENGTH_FACTOR[length];
   // Lower strings ring longer, like on a real piano.
-  const ringTime = clamp(1.7 * Math.pow(261.63 / frequency, 0.4), 0.35, 2.4);
+  const ringTime = clamp(1.3 * factor * Math.pow(261.63 / frequency, 0.35), 0.2, 2.0);
   const attack = (t: number) => 1 - Math.exp(-t / 0.0025);
 
   switch (tone) {
     case "sine":
       return {
         partials: [{ ratio: 1, amplitude: 1, decayScale: 1 }],
-        duration: clamp(ringTime * 1.1, 0.6, 1.8),
+        duration: clamp(ringTime * 1.1, 0.4, 2.2),
         envelope: (t, decayScale) => attack(t) * Math.exp(-t / (ringTime * decayScale)),
         detuneCents: 0,
       };
@@ -56,10 +65,10 @@ function voiceFor(tone: Tone, frequency: number): Voice {
         [6, 0.25],
         [8, 0.15],
       ];
-      const hold = 0.55;
+      const hold = 0.5 * factor;
       return {
         partials: drawbars.map(([ratio, amplitude]) => ({ ratio, amplitude, decayScale: 1 })),
-        duration: hold + 0.25,
+        duration: hold + 0.2,
         envelope: (t) => (t < hold ? attack(t) : Math.exp(-(t - hold) / 0.08)),
         detuneCents: 1.2,
       };
@@ -77,18 +86,18 @@ function voiceFor(tone: Tone, frequency: number): Voice {
       }
       return {
         partials,
-        duration: clamp(ringTime * 1.25, 0.7, 2.6),
+        duration: clamp(ringTime * 1.15, 0.4, 2.4),
         envelope: (t, decayScale) => attack(t) * Math.exp(-t / (ringTime * decayScale)),
-        detuneCents: 0.8,
+        detuneCents: 0.5,
       };
     }
   }
 }
 
 /** Render a single note to a 16-bit mono PCM WAV buffer. */
-export function renderNote(midi: number, tone: Tone): Buffer {
+export function renderNote(midi: number, sound: Sound): Buffer {
   const frequency = midiToFrequency(midi);
-  const voice = voiceFor(tone, frequency);
+  const voice = voiceFor(sound, frequency);
   const sampleCount = Math.floor(voice.duration * SAMPLE_RATE);
   const samples = new Float64Array(sampleCount);
   const nyquist = SAMPLE_RATE / 2;
@@ -139,19 +148,19 @@ export function renderNote(midi: number, tone: Tone): Buffer {
 
 const ready = new Map<string, Promise<string>>();
 
-function notePath(midi: number, tone: Tone): string {
-  return join(NOTES_DIR, `v${SYNTH_VERSION}-${tone}-${midi}.wav`);
+function notePath(midi: number, sound: Sound): string {
+  return join(NOTES_DIR, `v${SYNTH_VERSION}-${sound.tone}-${sound.length}-${midi}.wav`);
 }
 
 /** Make sure the WAV for a note exists on disk, rendering it on first use. */
-export function ensureNote(midi: number, tone: Tone): Promise<string> {
-  const path = notePath(midi, tone);
+export function ensureNote(midi: number, sound: Sound): Promise<string> {
+  const path = notePath(midi, sound);
   let pending = ready.get(path);
   if (!pending) {
     pending = (async () => {
       if (!existsSync(path)) {
         mkdirSync(NOTES_DIR, { recursive: true });
-        await writeFile(path, renderNote(midi, tone));
+        await writeFile(path, renderNote(midi, sound));
       }
       return path;
     })();
@@ -162,15 +171,15 @@ export function ensureNote(midi: number, tone: Tone): Promise<string> {
 }
 
 /** Render a set of notes ahead of time, yielding to the event loop between notes so the UI stays responsive. */
-export async function prewarm(midis: number[], tone: Tone): Promise<void> {
+export async function prewarm(midis: number[], sound: Sound): Promise<void> {
   for (const midi of midis) {
-    await ensureNote(midi, tone);
+    await ensureNote(midi, sound);
     await new Promise((resolve) => setImmediate(resolve));
   }
 }
 
-export async function playNote(midi: number, tone: Tone): Promise<void> {
-  const path = await ensureNote(midi, tone);
+export async function playNote(midi: number, sound: Sound): Promise<void> {
+  const path = await ensureNote(midi, sound);
   const child = spawn("/usr/bin/afplay", [path], { stdio: "ignore" });
   child.on("error", () => {
     /* afplay missing or audio unavailable; nothing useful to do per keystroke */

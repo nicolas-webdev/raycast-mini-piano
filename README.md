@@ -30,17 +30,17 @@ C D E F G A B C D E F
 | `Shift` + letter        | Same note one octave higher                                                                                                         |
 | `z` / `x`               | Typing octave down / up (also the dropdown at the top right, or ⌘[ / ⌘]). They stay in the melody as markers so replay follows them |
 | `Space`                 | A short rest in the melody                                                                                                          |
-| Arrow keys + `Enter`    | Play the selected key tile                                                                                                          |
+| Arrow keys + `Enter`    | Play the selected white key; ⌘↩ plays the black key on that tile |
 | ⌘R                      | Replay the melody in the search field                                                                                               |
 | ⌘⇧C                     | Copy the melody as note names (`C4 E4 G4`)                                                                                          |
 | ⌃X                      | Clear the melody                                                                                                                    |
 
-The grid shows the typing octave and the one above it. Each tile is labelled with its note and the key that plays it; the tile flashes amber while the note sounds.
+The grid is laid out like the instrument: one row of seven white keys per octave, each black key sitting on the upper right of its white key, for the typing octave and the one above it. Tiles carry the note name and the key that plays it, and flash amber while the note sounds.
 
 ## Preferences
 
 - **Tone**: Electric Piano (default), Pure Sine, or Organ.
-- **Key Tiles**: Drawn keys (default) or plain color tiles with labels underneath.
+- **Note Length**: Short (default), Medium, or Long. Short keeps fast runs from piling up.
 
 ## How the sound works
 

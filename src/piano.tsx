@@ -1,5 +1,5 @@
 import { Action, ActionPanel, Cache, Grid, Icon, Keyboard, environment, getPreferenceValues } from "@raycast/api";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   isBlackKey,
   keyLabelFor,
@@ -12,13 +12,16 @@ import {
   OCTAVE_DOWN_KEY,
   OCTAVE_UP_KEY,
 } from "./keymap";
-import { playNote, prewarm, Tone } from "./synth";
+import { NoteLength, playNote, prewarm, Sound, Tone } from "./synth";
 import { tilePath } from "./tiles";
 
 interface PianoPreferences {
   tone: Tone;
-  tileStyle: "drawn" | "plain";
+  noteLength: NoteLength;
 }
+
+/** Semitone offsets of the white keys within an octave; the black key, if any, is the next semitone up. */
+const WHITE_KEYS = [0, 2, 4, 5, 7, 9, 11];
 
 const PRESS_MS = 320;
 const REPLAY_STEP_MS = 230;
@@ -43,7 +46,8 @@ function melodyNoteNames(melody: string, octave: number): string {
 }
 
 export default function Command() {
-  const { tone, tileStyle } = getPreferenceValues<PianoPreferences>();
+  const { tone, noteLength } = getPreferenceValues<PianoPreferences>();
+  const sound = useMemo<Sound>(() => ({ tone, length: noteLength }), [tone, noteLength]);
   const [octave, setOctaveState] = useState(initialOctave);
   const [melody, setMelodyState] = useState("");
   const [pressed, setPressed] = useState<Record<number, number>>({});
@@ -67,10 +71,10 @@ export default function Command() {
 
   const play = useCallback(
     (midi: number) => {
-      void playNote(midi, tone);
+      void playNote(midi, sound);
       const token = Math.random();
       setPressed((current) => ({ ...current, [midi]: token }));
-      setSelectedId(String(midi));
+      setSelectedId(String(isBlackKey(midi) ? midi - 1 : midi));
       setTimeout(() => {
         setPressed((current) => {
           if (current[midi] !== token) return current;
@@ -80,7 +84,7 @@ export default function Command() {
         });
       }, PRESS_MS);
     },
-    [tone],
+    [sound],
   );
 
   const stopReplay = useCallback(() => {
@@ -106,8 +110,8 @@ export default function Command() {
   useEffect(() => {
     const midis: number[] = [];
     for (let semitone = 0; semitone < 24; semitone++) midis.push(midiFor(octave, semitone));
-    void prewarm(midis, tone);
-  }, [octave, tone]);
+    void prewarm(midis, sound);
+  }, [octave, sound]);
 
   const onSearchTextChange = useCallback(
     (text: string) => {
@@ -143,9 +147,9 @@ export default function Command() {
   return (
     <Grid
       navigationTitle="Mini Piano"
-      columns={6}
-      aspectRatio="4/3"
-      inset={Grid.Inset.Small}
+      columns={7}
+      aspectRatio="3/4"
+      inset={Grid.Inset.Zero}
       fit={Grid.Fit.Fill}
       filtering={false}
       searchText={melody}
@@ -169,28 +173,40 @@ export default function Command() {
             sectionOctave === octave ? "a s d f g h j k  ·  w e t y u" : "k l ; '  ·  o p  ·  shift for the rest"
           }
         >
-          {Array.from({ length: 12 }, (_, semitone) => midiFor(sectionOctave, semitone)).map((midi) => {
+          {WHITE_KEYS.map((semitone) => {
+            const midi = midiFor(sectionOctave, semitone);
+            const blackMidi = isBlackKey(midi + 1) ? midi + 1 : undefined;
             const name = displayName(midi);
-            const keyLabel = keyLabelFor(midi, octave);
-            const black = isBlackKey(midi);
-            const isPressed = pressed[midi] !== undefined;
-            const content =
-              tileStyle === "plain"
-                ? { color: isPressed ? "#FFB547" : black ? "#1F1F24" : "#F7F3EB" }
-                : {
-                    source: tilePath({ name, keyLabel, black, pressed: isPressed, appearance: environment.appearance }),
-                  };
+            const blackName = blackMidi !== undefined ? displayName(blackMidi) : undefined;
+            const tile = tilePath({
+              white: { name, keyLabel: keyLabelFor(midi, octave), pressed: pressed[midi] !== undefined },
+              black:
+                blackMidi !== undefined && blackName
+                  ? {
+                      name: blackName,
+                      keyLabel: keyLabelFor(blackMidi, octave),
+                      pressed: pressed[blackMidi] !== undefined,
+                    }
+                  : undefined,
+              appearance: environment.appearance,
+            });
             return (
               <Grid.Item
                 key={midi}
                 id={String(midi)}
-                content={content}
-                title={tileStyle === "plain" ? name : undefined}
-                subtitle={tileStyle === "plain" ? keyLabel : undefined}
+                content={{ source: tile }}
                 actions={
                   <ActionPanel>
                     <ActionPanel.Section>
                       <Action title={`Play ${name}`} icon={Icon.Play} onAction={() => playFromGrid(midi)} />
+                      {blackMidi !== undefined && (
+                        <Action
+                          title={`Play ${blackName}`}
+                          icon={Icon.Play}
+                          shortcut={{ modifiers: ["cmd"], key: "return" }}
+                          onAction={() => playFromGrid(blackMidi)}
+                        />
+                      )}
                       <Action
                         title="Replay Melody"
                         icon={Icon.Repeat}
