@@ -52,6 +52,31 @@ export function keyLabelFor(midi: number, typingOctave: number): string | undefi
   return undefined;
 }
 
+export const OCTAVE_DOWN_KEY = "z";
+export const OCTAVE_UP_KEY = "x";
+
+/**
+ * Expand a melody string into midi notes. `z`/`x` characters are octave shifts that were applied as they were typed,
+ * so the walk starts from the octave the melody began at and replays the shifts. Rests and unmapped characters are null.
+ */
+export function melodyToMidis(melody: string, octaveNow: number): (number | null)[] {
+  const chars = [...melody];
+  let octave = octaveNow;
+  for (const char of [...chars].reverse()) {
+    if (char === OCTAVE_DOWN_KEY && octave < MAX_OCTAVE) octave++;
+    else if (char === OCTAVE_UP_KEY && octave > MIN_OCTAVE) octave--;
+  }
+  const midis: (number | null)[] = [];
+  for (const char of chars) {
+    if (char === OCTAVE_DOWN_KEY || char === OCTAVE_UP_KEY) {
+      octave = Math.min(MAX_OCTAVE, Math.max(MIN_OCTAVE, octave + (char === OCTAVE_UP_KEY ? 1 : -1)));
+      continue;
+    }
+    midis.push(midiForChar(char, octave) ?? null);
+  }
+  return midis;
+}
+
 /** Resolve a typed character to a midi note. Shifted letters play an octave higher. */
 export function midiForChar(char: string, typingOctave: number): number | undefined {
   const lower = char.toLowerCase();

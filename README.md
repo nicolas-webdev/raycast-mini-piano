@@ -23,17 +23,17 @@ a s d f g h j k l ; '
 C D E F G A B C D E F
 ```
 
-| Keys                    | What they do                                                             |
-| ----------------------- | ------------------------------------------------------------------------ |
-| `a s d f g h j k l ; '` | White keys, from C of the typing octave up to F of the next              |
-| `w e t y u o p`         | Black keys in between                                                    |
-| `Shift` + letter        | Same note one octave higher                                              |
-| `z` / `x`               | Typing octave down / up (also the dropdown at the top right, or ⌘[ / ⌘]) |
-| `Space`                 | A short rest in the melody                                               |
-| Arrow keys + `Enter`    | Play the selected key tile                                               |
-| ⌘R                      | Replay the melody in the search field                                    |
-| ⌘⇧C                     | Copy the melody as note names (`C4 E4 G4`)                               |
-| ⌃X                      | Clear the melody                                                         |
+| Keys                    | What they do                                                                                                                        |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `a s d f g h j k l ; '` | White keys, from C of the typing octave up to F of the next                                                                         |
+| `w e t y u o p`         | Black keys in between                                                                                                               |
+| `Shift` + letter        | Same note one octave higher                                                                                                         |
+| `z` / `x`               | Typing octave down / up (also the dropdown at the top right, or ⌘[ / ⌘]). They stay in the melody as markers so replay follows them |
+| `Space`                 | A short rest in the melody                                                                                                          |
+| Arrow keys + `Enter`    | Play the selected key tile                                                                                                          |
+| ⌘R                      | Replay the melody in the search field                                                                                               |
+| ⌘⇧C                     | Copy the melody as note names (`C4 E4 G4`)                                                                                          |
+| ⌃X                      | Clear the melody                                                                                                                    |
 
 The grid shows the typing octave and the one above it. Each tile is labelled with its note and the key that plays it; the tile flashes amber while the note sounds.
 

@@ -1,6 +1,17 @@
 import { Action, ActionPanel, Cache, Grid, Icon, Keyboard, environment, getPreferenceValues } from "@raycast/api";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { isBlackKey, keyLabelFor, MAX_OCTAVE, midiFor, midiForChar, MIN_OCTAVE, noteName } from "./keymap";
+import {
+  isBlackKey,
+  keyLabelFor,
+  MAX_OCTAVE,
+  melodyToMidis,
+  midiFor,
+  midiForChar,
+  MIN_OCTAVE,
+  noteName,
+  OCTAVE_DOWN_KEY,
+  OCTAVE_UP_KEY,
+} from "./keymap";
 import { playNote, prewarm, Tone } from "./synth";
 import { tilePath } from "./tiles";
 
@@ -25,9 +36,8 @@ function displayName(midi: number): string {
 }
 
 function melodyNoteNames(melody: string, octave: number): string {
-  return [...melody]
-    .map((char) => midiForChar(char, octave))
-    .filter((midi): midi is number => midi !== undefined)
+  return melodyToMidis(melody, octave)
+    .filter((midi): midi is number => midi !== null)
     .map(displayName)
     .join(" ");
 }
@@ -80,13 +90,12 @@ export default function Command() {
 
   const replay = useCallback(() => {
     stopReplay();
-    const chars = [...melodyRef.current];
+    const midis = melodyToMidis(melodyRef.current, octaveRef.current);
     let index = 0;
     const step = () => {
-      if (index >= chars.length) return;
-      const char = chars[index++];
-      const midi = midiForChar(char, octaveRef.current);
-      if (midi !== undefined) play(midi);
+      if (index >= midis.length) return;
+      const midi = midis[index++];
+      if (midi !== null) play(midi);
       replayTimer.current = setTimeout(step, REPLAY_STEP_MS);
     };
     step();
@@ -107,14 +116,14 @@ export default function Command() {
         let i = 0;
         while (i < previous.length && previous[i] === text[i]) i++;
         const char = text[i];
-        if (char === "z" || char === "x") {
-          setOctave(octaveRef.current + (char === "z" ? -1 : 1));
-          setMelody(previous);
-          return;
+        if (char === OCTAVE_DOWN_KEY || char === OCTAVE_UP_KEY) {
+          setOctave(octaveRef.current + (char === OCTAVE_UP_KEY ? 1 : -1));
+        } else {
+          const midi = midiForChar(char, octaveRef.current);
+          if (midi !== undefined) play(midi);
         }
-        const midi = midiForChar(char, octaveRef.current);
-        if (midi !== undefined) play(midi);
       }
+      // The field always keeps what Raycast has (octave shifts included) so the controlled value never drifts.
       setMelody(text);
     },
     [play, setMelody, setOctave],
