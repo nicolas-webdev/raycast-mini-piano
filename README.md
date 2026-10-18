@@ -9,12 +9,12 @@ pnpm install
 pnpm dev
 ```
 
-`pnpm dev` runs `ray develop`, which registers the extension with the Raycast app on this Mac. It stays installed after you stop the dev server; it shows up under **Mini Piano** in Raycast's root search. Give it a hotkey or alias in Raycast Settings → Extensions.
+`pnpm dev` runs `ray develop`, which registers the extension with the Raycast app on this Mac. The window title says "basic player, no sustain" if the synth could not start; `engine.log` in the extension's support directory (`~/Library/Application Support/com.raycast.macos/extensions/mini-piano/`) says why. It stays installed after you stop the dev server; it shows up under **Mini Piano** in Raycast's root search. Give it a hotkey or alias in Raycast Settings → Extensions.
 
 Two one-time things:
 
 - Switch to **English input** before playing: with a Japanese IME active, letters go into romaji composition and don't reach the search field one keystroke at a time.
-- Turn off the accent popup for Raycast so holding `a`, `e`, `u` or `o` repeats instead of offering `à á â`: `defaults write com.raycast.macos ApplePressAndHoldEnabled -bool false`, then relaunch Raycast. Revert with `defaults delete com.raycast.macos ApplePressAndHoldEnabled`.
+- Optional: macOS shows an accent popup when you hold `a`, `e`, `u` or `o`, so those four keys (C, D♯, A♯, C♯ of the next octave) can't sustain. If you want them to, you can turn the popup off for Raycast only with `defaults write com.raycast.macos ApplePressAndHoldEnabled -bool false` and relaunch Raycast (`defaults delete com.raycast.macos ApplePressAndHoldEnabled` reverts it). The extension never changes this for you.
 
 The first launch builds a small real-time synth with the Swift compiler from the Xcode Command Line Tools (about 10 seconds, with a toast). Without the tools the piano still works through `afplay`, just without sustain.
 

@@ -1,6 +1,6 @@
 import { Action, ActionPanel, Cache, Grid, Icon, Keyboard, environment, getPreferenceValues } from "@raycast/api";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Engine } from "./engine";
+import { Engine, EngineMode } from "./engine";
 import {
   DEFAULT_KEY_REPEAT,
   isAutoRepeat,
@@ -75,6 +75,7 @@ export default function Command() {
   const [melody, setMelodyState] = useState("");
   const [pressed, setPressed] = useState<Set<number>>(() => new Set());
   const [selectedId, setSelectedId] = useState<string | undefined>();
+  const [engineMode, setEngineMode] = useState<EngineMode>(engine.mode);
 
   const octaveRef = useRef(octave);
   const melodyRef = useRef(melody);
@@ -183,6 +184,7 @@ export default function Command() {
     void readKeyRepeatSettings().then((settings) => {
       keyRepeat.current = settings;
     });
+    engine.onModeChange = setEngineMode;
     void engine.start().then(() => {
       if (engine.mode !== "live") {
         const midis: number[] = [];
@@ -217,6 +219,9 @@ export default function Command() {
         let count = chars.length;
         const index = appended || inserted ? i : text.length - count;
         const press = lastPress.current;
+        engine.log(
+          `key ${JSON.stringify(char)} x${count} gap=${press ? now - press.last.at : "-"} repeats=${press?.last.repeats ?? "-"}`,
+        );
         if (press && isAutoRepeat(press.last, char, now, keyRepeat.current)) {
           press.last.repeats += count;
           press.last.at = now;
@@ -254,7 +259,7 @@ export default function Command() {
       // The field always keeps what Raycast has so the controlled value never drifts from the native one.
       setMelody(text);
     },
-    [collapseRun, noteOn, scheduleRelease, setMelody, setOctave],
+    [collapseRun, engine, noteOn, scheduleRelease, setMelody, setOctave],
   );
 
   const playFromGrid = useCallback(
@@ -270,7 +275,13 @@ export default function Command() {
 
   return (
     <Grid
-      navigationTitle="Mini Piano"
+      navigationTitle={
+        engineMode === "live"
+          ? "Mini Piano"
+          : engineMode === "starting"
+            ? "Mini Piano · starting synth…"
+            : "Mini Piano · basic player, no sustain"
+      }
       columns={7}
       aspectRatio="3/4"
       inset={Grid.Inset.Zero}
