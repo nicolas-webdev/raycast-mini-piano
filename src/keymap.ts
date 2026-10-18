@@ -55,26 +55,42 @@ export function keyLabelFor(midi: number, typingOctave: number): string | undefi
 export const OCTAVE_DOWN_KEY = "z";
 export const OCTAVE_UP_KEY = "x";
 
+/** Appended to a note character in the melody for every HOLD_MARK_MS the key was held past a tap. */
+export const HOLD_MARK = "–";
+export const HOLD_MARK_MS = 150;
+
+export interface MelodyNote {
+  /** null for a rest or an unmapped character */
+  midi: number | null;
+  /** How long the note was held past a plain tap. */
+  holdMs: number;
+}
+
 /**
- * Expand a melody string into midi notes. `z`/`x` characters are octave shifts that were applied as they were typed,
- * so the walk starts from the octave the melody began at and replays the shifts. Rests and unmapped characters are null.
+ * Expand a melody string into notes. `z`/`x` characters are octave shifts that were applied as they were typed,
+ * so the walk starts from the octave the melody began at and replays the shifts. Hold marks after a note extend it.
  */
-export function melodyToMidis(melody: string, octaveNow: number): (number | null)[] {
+export function parseMelody(melody: string, octaveNow: number): MelodyNote[] {
   const chars = [...melody];
   let octave = octaveNow;
   for (const char of [...chars].reverse()) {
     if (char === OCTAVE_DOWN_KEY && octave < MAX_OCTAVE) octave++;
     else if (char === OCTAVE_UP_KEY && octave > MIN_OCTAVE) octave--;
   }
-  const midis: (number | null)[] = [];
+  const notes: MelodyNote[] = [];
   for (const char of chars) {
     if (char === OCTAVE_DOWN_KEY || char === OCTAVE_UP_KEY) {
       octave = Math.min(MAX_OCTAVE, Math.max(MIN_OCTAVE, octave + (char === OCTAVE_UP_KEY ? 1 : -1)));
       continue;
     }
-    midis.push(midiForChar(char, octave) ?? null);
+    if (char === HOLD_MARK || char === "-") {
+      const last = notes[notes.length - 1];
+      if (last) last.holdMs += HOLD_MARK_MS;
+      continue;
+    }
+    notes.push({ midi: midiForChar(char, octave) ?? null, holdMs: 0 });
   }
-  return midis;
+  return notes;
 }
 
 /** Resolve a typed character to a midi note. Shifted letters play an octave higher. */
